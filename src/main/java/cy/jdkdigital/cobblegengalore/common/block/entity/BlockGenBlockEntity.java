@@ -1,6 +1,7 @@
 package cy.jdkdigital.cobblegengalore.common.block.entity;
 
 import cy.jdkdigital.cobblegengalore.CobbleGenGalore;
+import cy.jdkdigital.cobblegengalore.Config;
 import cy.jdkdigital.cobblegengalore.common.block.BlockGenBlock;
 import cy.jdkdigital.cobblegengalore.common.recipe.BlockGenRecipe;
 import cy.jdkdigital.cobblegengalore.util.RecipeHelper;
@@ -44,8 +45,7 @@ public class BlockGenBlockEntity extends BlockEntity
             blockEntity.recipeId = null;
         }
 
-        // TODO config for production time
-        if (level.getGameTime()%20 == 0) {
+        if (level.getGameTime() % Config.tickRate == 0) {
             if (blockEntity.recipe != null) {
                 var recipe = blockEntity.recipe.value();
                 var modifier = (blockEntity.getBlockState().getBlock() instanceof BlockGenBlock block ? block.modifier : 1) * recipe.speed;

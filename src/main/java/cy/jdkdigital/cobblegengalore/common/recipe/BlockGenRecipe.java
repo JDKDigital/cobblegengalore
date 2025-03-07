@@ -52,8 +52,8 @@ public class BlockGenRecipe implements Recipe<RecipeInput>
     public boolean matches(BlockState first, BlockState second, BlockState below) {
         boolean validModifierBlock = this.modifier.isAir() || this.modifier.is(below.getBlock());
         return validModifierBlock && (
-                this.left.is(first.getBlock()) && this.right.is(second.getBlock()) ||
-                this.right.is(first.getBlock()) && this.left.is(second.getBlock())
+                ((this.left.isAir() || this.left.is(first.getBlock())) && (this.right.isAir() ||this.right.is(second.getBlock()))) ||
+                (this.right.isAir() ||this.right.is(first.getBlock())) && (this.left.isAir() || this.left.is(second.getBlock()))
         );
     }
 
@@ -96,8 +96,8 @@ public class BlockGenRecipe implements Recipe<RecipeInput>
         private static final MapCodec<BlockGenRecipe> CODEC = RecordCodecBuilder.mapCodec(
                 builder -> builder.group(
                                 ItemStack.CODEC.fieldOf("result").orElse(ItemStack.EMPTY).forGetter(recipe -> recipe.result),
-                                BlockState.CODEC.fieldOf("left").forGetter(recipe -> recipe.left),
-                                BlockState.CODEC.fieldOf("right").forGetter(recipe -> recipe.right),
+                                BlockState.CODEC.fieldOf("left").orElse(Blocks.AIR.defaultBlockState()).forGetter(recipe -> recipe.left),
+                                BlockState.CODEC.fieldOf("right").orElse(Blocks.AIR.defaultBlockState()).forGetter(recipe -> recipe.right),
                                 BlockState.CODEC.fieldOf("modifier").orElse(Blocks.AIR.defaultBlockState()).forGetter(recipe -> recipe.modifier),
                                 Codec.FLOAT.fieldOf("speed").orElse(1f).forGetter(recipe -> recipe.speed),
                                 Codec.BOOL.fieldOf("consumeLeft").orElse(false).forGetter(recipe -> recipe.consumeLeft),
