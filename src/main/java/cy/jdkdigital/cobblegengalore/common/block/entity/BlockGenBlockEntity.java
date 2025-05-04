@@ -99,6 +99,10 @@ public class BlockGenBlockEntity extends BlockEntity
             var cap = level.getCapability(Capabilities.ItemHandler.BLOCK, blockPos.above(), null);
             blockEntity.internalBuffer = ItemHandlerHelper.insertItem(cap, blockEntity.internalBuffer, false);
         }
+
+        if (level.getGameTime() % 113 == 0 && blockEntity.recipe == null && level instanceof ServerLevel serverLevel) {
+            blockEntity.setRecipe(RecipeHelper.getRecipe(serverLevel, blockPos));
+        }
     }
 
     public static void clientTick(Level level, BlockPos blockPos, BlockState blockState, BlockGenBlockEntity blockEntity) {
