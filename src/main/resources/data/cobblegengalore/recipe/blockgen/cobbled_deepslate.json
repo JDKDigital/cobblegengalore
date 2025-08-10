@@ -1,0 +1,13 @@
+{
+  "type": "cobblegengalore:blockgen",
+  "result": {
+    "id": "minecraft:cobbled_deepslate",
+    "count": 1
+  },
+  "left": {
+    "Name": "minecraft:packed_ice"
+  },
+  "right": {
+    "Name": "minecraft:lava"
+  }
+}

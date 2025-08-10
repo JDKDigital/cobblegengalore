@@ -1,0 +1,23 @@
+{
+  "type": "cobblegengalore:blockgen",
+  "result": {
+    "id": "xycraft_world:kivi",
+    "count": 1
+  },
+  "speed": 2,
+  "left": {
+    "Name": "minecraft:water"
+  },
+  "right": {
+    "Name": "minecraft:lava"
+  },
+  "modifier": {
+    "Name": "xycraft_world:kivi"
+  },
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "xycraft_world"
+    }
+  ]
+}
