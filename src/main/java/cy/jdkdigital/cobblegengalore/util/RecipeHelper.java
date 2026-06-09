@@ -10,6 +10,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 
 import javax.annotation.Nullable;
 
@@ -49,7 +50,7 @@ public class RecipeHelper
     public static BlockState getStateAtPos(Level level, BlockPos pos, Direction dir) {
         BlockState state;
         var northCap = level.getCapability(Capabilities.FluidHandler.BLOCK, pos.relative(dir), dir.getOpposite());
-        if (northCap != null) {
+        if (northCap != null && northCap.getTanks() > 0) {
             state = northCap.getFluidInTank(0).getFluid().defaultFluidState().createLegacyBlock();
         } else {
             state = level.getBlockState(pos.relative(dir));
@@ -59,11 +60,11 @@ public class RecipeHelper
 
     public static int consumeFluid(Level level, BlockPos pos, Direction dir, int count, boolean simulate) {
         var fluidCap = level.getCapability(Capabilities.FluidHandler.BLOCK, pos.relative(dir), dir.getOpposite());
-        if (fluidCap != null) {
+        if (fluidCap != null && fluidCap.getTanks() > 0) {
             var removedAmount = (int)Math.min(count, Math.floor(fluidCap.getFluidInTank(0).getAmount() / 1000f));
             if (removedAmount > 0) {
                 if (!simulate) {
-                    fluidCap.getFluidInTank(0).shrink(1000 * removedAmount);
+                    fluidCap.drain(1000 * removedAmount, IFluidHandler.FluidAction.EXECUTE);
                 }
                 return removedAmount;
             }

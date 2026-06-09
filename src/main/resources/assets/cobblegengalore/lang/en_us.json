@@ -1,5 +1,6 @@
 {
   "jei.cobblegengalore.blockgen": "Block Generator",
+  "jei.cobblegengalore.consumed": "Source block is consumed",
   "block_gen.tooltip": "Speed modifier: %s",
   "block.cobblegengalore.block_gen_stone": "Stone Block Generator",
   "block.cobblegengalore.block_gen_copper": "Copper Block Generator",

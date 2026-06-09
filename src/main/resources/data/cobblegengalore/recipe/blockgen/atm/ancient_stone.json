@@ -1,0 +1,23 @@
+{
+  "type": "cobblegengalore:blockgen",
+  "result": {
+    "id": "allthemodium:ancient_stone",
+    "count": 1
+  },
+  "speed": 2,
+  "left": {
+    "Name": "allthemodium:soul_lava"
+  },
+  "right": {
+    "Name": "minecraft:blue_ice"
+  },
+  "modifier": {
+    "Name": "minecraft:oxidized_copper"
+  },
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "allthemodium"
+    }
+  ]
+}

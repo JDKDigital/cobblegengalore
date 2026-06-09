@@ -50,6 +50,7 @@ public class BlockGenRecipe implements Recipe<RecipeInput>
     }
 
     public boolean matches(BlockState first, BlockState second, BlockState below) {
+        // TODO count waterlogged as water
         boolean validModifierBlock = this.modifier.isAir() || this.modifier.is(below.getBlock());
         return validModifierBlock && (
                 ((this.left.isAir() || this.left.is(first.getBlock())) && (this.right.isAir() || this.right.is(second.getBlock()))) ||

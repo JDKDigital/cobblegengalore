@@ -23,7 +23,7 @@ public class CobbleGenGaloreJeiPlugin implements IModPlugin
 {
     private static final ResourceLocation pluginId = ResourceLocation.fromNamespaceAndPath(CobbleGenGalore.MODID, CobbleGenGalore.MODID);
 
-    public static final RecipeType<BlockGenRecipe> BLOCK_GEN_TYPE = RecipeType.create(CobbleGenGalore.MODID, "tap_extract", BlockGenRecipe.class);
+    public static final RecipeType<RecipeHolder<BlockGenRecipe>> BLOCK_GEN_TYPE = RecipeType.createRecipeHolderType(CobbleGenGalore.BLOCKGEN_RECIPE_TYPE.getId());
 
     public CobbleGenGaloreJeiPlugin() {}
 
@@ -57,6 +57,6 @@ public class CobbleGenGaloreJeiPlugin implements IModPlugin
         RecipeManager recipeManager = Minecraft.getInstance().level.getRecipeManager();
 
         List<RecipeHolder<BlockGenRecipe>> bottlerRecipeMap = recipeManager.getAllRecipesFor(CobbleGenGalore.BLOCKGEN_RECIPE_TYPE.get());
-        registration.addRecipes(BLOCK_GEN_TYPE, bottlerRecipeMap.stream().map(RecipeHolder::value).toList());
+        registration.addRecipes(BLOCK_GEN_TYPE, bottlerRecipeMap);
     }
 }

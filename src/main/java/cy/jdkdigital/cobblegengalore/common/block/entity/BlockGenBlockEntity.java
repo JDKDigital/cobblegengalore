@@ -46,11 +46,11 @@ public class BlockGenBlockEntity extends BlockEntity
         }
 
         if (level.getGameTime() % Config.tickRate == 0) {
-            if (blockEntity.recipe != null) {
+            if (blockEntity.recipe != null && (blockEntity.internalBuffer.isEmpty() || blockEntity.internalBuffer.getCount() < blockEntity.internalBuffer.getMaxStackSize())) {
                 var recipe = blockEntity.recipe.value();
                 var modifier = (blockEntity.getBlockState().getBlock() instanceof BlockGenBlock block ? block.modifier : 1) * recipe.speed;
                 var production = recipe.result.copy();
-                var maxProduction = (int) (production.getCount() * modifier);
+                var maxProduction = Math.min(production.getMaxStackSize(), (int) (production.getCount() * modifier));
 
                 // Consume fluids
                 var consumedAmountLeft = recipe.consumeLeft ? 0 : maxProduction;
@@ -94,6 +94,8 @@ public class BlockGenBlockEntity extends BlockEntity
                     } else {
                         blockEntity.internalBuffer = production;
                     }
+                    // Don't go over stack limit
+                    blockEntity.internalBuffer.setCount(Math.min(blockEntity.internalBuffer.getMaxStackSize(), blockEntity.internalBuffer.getCount()));
                 }
             }
             var cap = level.getCapability(Capabilities.ItemHandler.BLOCK, blockPos.above(), null);
@@ -140,6 +142,9 @@ public class BlockGenBlockEntity extends BlockEntity
             this.recipe = null;
             this.recipeId = ResourceLocation.tryParse(tag.getString("recipe"));
         }
+        if (tag.contains("buffer")) {
+            this.internalBuffer = ItemStack.parse(registries, tag.getCompound("buffer")).orElse(ItemStack.EMPTY);
+        }
     }
 
     @Override
@@ -147,6 +152,9 @@ public class BlockGenBlockEntity extends BlockEntity
         super.saveAdditional(tag, registries);
         if (this.recipe != null) {
             tag.putString("recipe", this.recipe.id().toString());
+        }
+        if (!this.internalBuffer.isEmpty()) {
+            tag.put("buffer", this.internalBuffer.save(registries));
         }
     }
 

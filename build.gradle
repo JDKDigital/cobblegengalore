@@ -117,7 +117,7 @@ configurations {
 }
 
 dependencies {
-    implementation "curse.maven:jei-238222:5583523"
+    implementation "curse.maven:jei-238222:6829086"
     implementation "curse.maven:productivebees-377897:5611632"
     implementation "curse.maven:storage-drawers-223852:5633810"
     implementation "curse.maven:mekanism-268560:5574951"
