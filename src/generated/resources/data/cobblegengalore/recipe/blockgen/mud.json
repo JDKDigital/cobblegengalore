@@ -1,0 +1,21 @@
+{
+  "type": "cobblegengalore:blockgen",
+  "consumeLeft": false,
+  "consumeRight": false,
+  "left": {
+    "Name": "minecraft:water",
+    "Properties": {
+      "level": "0"
+    }
+  },
+  "modifier": {
+    "Name": "minecraft:air"
+  },
+  "result": {
+    "id": "minecraft:mud"
+  },
+  "right": {
+    "Name": "minecraft:dirt"
+  },
+  "speed": 1.0
+}

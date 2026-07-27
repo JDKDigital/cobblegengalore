@@ -2,6 +2,7 @@ package cy.jdkdigital.cobblegengalore.compat.jei;
 
 import cy.jdkdigital.cobblegengalore.CobbleGenGalore;
 import cy.jdkdigital.cobblegengalore.common.recipe.BlockGenRecipe;
+import cy.jdkdigital.cobblegengalore.event.RecipeMapCache;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.helpers.IGuiHelper;
@@ -10,18 +11,16 @@ import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
-import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.RecipeManager;
 
 import javax.annotation.Nonnull;
-import java.util.List;
+import java.util.ArrayList;
 
 @JeiPlugin
 public class CobbleGenGaloreJeiPlugin implements IModPlugin
 {
-    private static final ResourceLocation pluginId = ResourceLocation.fromNamespaceAndPath(CobbleGenGalore.MODID, CobbleGenGalore.MODID);
+    private static final Identifier pluginId = Identifier.fromNamespaceAndPath(CobbleGenGalore.MODID, CobbleGenGalore.MODID);
 
     public static final RecipeType<RecipeHolder<BlockGenRecipe>> BLOCK_GEN_TYPE = RecipeType.createRecipeHolderType(CobbleGenGalore.BLOCKGEN_RECIPE_TYPE.getId());
 
@@ -29,7 +28,7 @@ public class CobbleGenGaloreJeiPlugin implements IModPlugin
 
     @Nonnull
     @Override
-    public ResourceLocation getPluginUid() {
+    public Identifier getPluginUid() {
         return pluginId;
     }
 
@@ -54,9 +53,6 @@ public class CobbleGenGaloreJeiPlugin implements IModPlugin
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
-        RecipeManager recipeManager = Minecraft.getInstance().level.getRecipeManager();
-
-        List<RecipeHolder<BlockGenRecipe>> bottlerRecipeMap = recipeManager.getAllRecipesFor(CobbleGenGalore.BLOCKGEN_RECIPE_TYPE.get());
-        registration.addRecipes(BLOCK_GEN_TYPE, bottlerRecipeMap);
+        registration.addRecipes(BLOCK_GEN_TYPE, new ArrayList<>(RecipeMapCache.getRecipeMap().byType(CobbleGenGalore.BLOCKGEN_RECIPE_TYPE.get())));
     }
 }

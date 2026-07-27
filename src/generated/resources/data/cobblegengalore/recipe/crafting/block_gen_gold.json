@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "G": "minecraft:glass",
+    "R": "#c:ingots/gold"
+  },
+  "pattern": [
+    "RRR",
+    "G G",
+    "RRR"
+  ],
+  "result": {
+    "id": "cobblegengalore:block_gen_gold"
+  }
+}

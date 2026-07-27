@@ -1,46 +1,4 @@
-1.21.1-0.2.8
+26.1.2-0.2.9
 
-- Added recipes for Create Ochrum
-
-
-1.21.1-0.2.7
-
-- Fixed that all generators produce full stacks
-- Added recipe for Ancient Stone (allthemodium)
-
-
-1.21.1-0.2.6
-
-- Fixed block generators not pushing to containers when internal buffer is full
-
-
-1.21.1-0.2.5
-
-- Internal buffer is now saved
-
-
-1.21.1-0.2.4
-
-- Stopped generators from running when internal buffer is full
-- Added tooltip to fluids that are consumed saying that they are consumed
-
-
-1.21.1-0.2.3
-
-- Fixed crash with ID fluid interface (and any other tankless fluid caps)
-
-
-1.21.1-0.2.2
-
-- Added recipes for netherrack, cobbled deepslate, tuff, xycraft kivi, ae2 skystone dust and create limestone, asurine, crimsite, scoria and veridium
-
-
-1.21.1-0.2.1
-
-- Block gens will now recheck for valid configurations every 5 seconds when it has no recipe
-
-
-1.21.1-0.2.0
-
-- Made the side blocks optional
-- Added diorite, andesite and granite recipes
+- Ported to 26.1.2
+- Added block generator recipes for calcite, blackstone, end stone and mud

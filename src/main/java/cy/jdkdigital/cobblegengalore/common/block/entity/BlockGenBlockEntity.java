@@ -5,51 +5,68 @@ import cy.jdkdigital.cobblegengalore.Config;
 import cy.jdkdigital.cobblegengalore.common.block.BlockGenBlock;
 import cy.jdkdigital.cobblegengalore.common.recipe.BlockGenRecipe;
 import cy.jdkdigital.cobblegengalore.util.RecipeHelper;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeMap;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Optional;
 
 public class BlockGenBlockEntity extends BlockEntity
 {
     private RecipeHolder<BlockGenRecipe> recipe;
-    private ResourceLocation recipeId;
+    private Identifier recipeId;
     private ItemStack internalBuffer = ItemStack.EMPTY;
 
     public BlockGenBlockEntity(BlockPos pos, BlockState blockState) {
         super(CobbleGenGalore.BLOCKGEN_BLOCKENTITY.get(), pos, blockState);
     }
 
-    public static void serverTick(Level level, BlockPos blockPos, BlockState blockState, BlockGenBlockEntity blockEntity) {
-        if (blockEntity.recipeId != null) {
-            Optional<RecipeHolder<?>> loadedRecipe = level.getRecipeManager().byKey(blockEntity.recipeId);
-            loadedRecipe.ifPresent(recipeHolder -> blockEntity.setRecipe((RecipeHolder<BlockGenRecipe>) recipeHolder));
-            blockEntity.recipeId = null;
+    @SuppressWarnings("unchecked")
+    private void resolveRecipeId(Level level) {
+        if (this.recipeId != null) {
+            RecipeMap recipeMap = RecipeHelper.getRecipeMap(level);
+            if (recipeMap != null) {
+                RecipeHolder<?> loadedRecipe = recipeMap.byKey(ResourceKey.create(Registries.RECIPE, this.recipeId));
+                if (loadedRecipe != null) {
+                    this.setRecipe((RecipeHolder<BlockGenRecipe>) loadedRecipe);
+                }
+            }
+            this.recipeId = null;
         }
+    }
+
+    public static void serverTick(Level level, BlockPos blockPos, BlockState blockState, BlockGenBlockEntity blockEntity) {
+        blockEntity.resolveRecipeId(level);
 
         if (level.getGameTime() % Config.tickRate == 0) {
             if (blockEntity.recipe != null && (blockEntity.internalBuffer.isEmpty() || blockEntity.internalBuffer.getCount() < blockEntity.internalBuffer.getMaxStackSize())) {
                 var recipe = blockEntity.recipe.value();
                 var modifier = (blockEntity.getBlockState().getBlock() instanceof BlockGenBlock block ? block.modifier : 1) * recipe.speed;
-                var production = recipe.result.copy();
+                var production = recipe.result.create();
                 var maxProduction = Math.min(production.getMaxStackSize(), (int) (production.getCount() * modifier));
 
                 // Consume fluids
@@ -98,8 +115,16 @@ public class BlockGenBlockEntity extends BlockEntity
                     blockEntity.internalBuffer.setCount(Math.min(blockEntity.internalBuffer.getMaxStackSize(), blockEntity.internalBuffer.getCount()));
                 }
             }
-            var cap = level.getCapability(Capabilities.ItemHandler.BLOCK, blockPos.above(), null);
-            blockEntity.internalBuffer = ItemHandlerHelper.insertItem(cap, blockEntity.internalBuffer, false);
+            ResourceHandler<ItemResource> cap = level.getCapability(Capabilities.Item.BLOCK, blockPos.above(), null);
+            if (cap != null && !blockEntity.internalBuffer.isEmpty()) {
+                int inserted = ResourceHandlerUtil.insertStacking(cap, ItemResource.of(blockEntity.internalBuffer), blockEntity.internalBuffer.getCount(), null);
+                if (inserted > 0) {
+                    blockEntity.internalBuffer.shrink(inserted);
+                    if (blockEntity.internalBuffer.isEmpty()) {
+                        blockEntity.internalBuffer = ItemStack.EMPTY;
+                    }
+                }
+            }
         }
 
         if (level.getGameTime() % 113 == 0 && blockEntity.recipe == null && level instanceof ServerLevel serverLevel) {
@@ -108,15 +133,11 @@ public class BlockGenBlockEntity extends BlockEntity
     }
 
     public static void clientTick(Level level, BlockPos blockPos, BlockState blockState, BlockGenBlockEntity blockEntity) {
-        if (blockEntity.recipeId != null) {
-            Optional<RecipeHolder<?>> loadedRecipe = level.getRecipeManager().byKey(blockEntity.recipeId);
-            loadedRecipe.ifPresent(recipeHolder -> blockEntity.setRecipe((RecipeHolder<BlockGenRecipe>) recipeHolder));
-            blockEntity.recipeId = null;
-        }
+        blockEntity.resolveRecipeId(level);
     }
 
     public BlockState getResultBlock() {
-        return recipe != null && recipe.value().result.getItem() instanceof BlockItem blockItem ? blockItem.getBlock().defaultBlockState() : null;
+        return recipe != null && recipe.value().result.item().value() instanceof BlockItem blockItem ? blockItem.getBlock().defaultBlockState() : null;
     }
 
     public boolean hasResult() {
@@ -124,7 +145,7 @@ public class BlockGenBlockEntity extends BlockEntity
     }
 
     public ItemStack getResultItem() {
-        return recipe != null ? recipe.value().result : null;
+        return recipe != null ? recipe.value().result.create() : null;
     }
 
     public void setRecipe(RecipeHolder<BlockGenRecipe> recipe) {
@@ -136,31 +157,38 @@ public class BlockGenBlockEntity extends BlockEntity
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        if (tag.contains("recipe")) {
-            this.recipe = null;
-            this.recipeId = ResourceLocation.tryParse(tag.getString("recipe"));
-        }
-        if (tag.contains("buffer")) {
-            this.internalBuffer = ItemStack.parse(registries, tag.getCompound("buffer")).orElse(ItemStack.EMPTY);
-        }
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        this.loadPacketNBT(input);
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        this.savePacketNBT(output);
+    }
+
+    private void loadPacketNBT(ValueInput input) {
+        String recipeKey = input.getStringOr("recipe", "");
+        if (!recipeKey.isEmpty()) {
+            this.recipe = null;
+            this.recipeId = Identifier.tryParse(recipeKey);
+        }
+        this.internalBuffer = input.read("buffer", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+    }
+
+    private void savePacketNBT(ValueOutput output) {
         if (this.recipe != null) {
-            tag.putString("recipe", this.recipe.id().toString());
+            output.putString("recipe", this.recipe.id().identifier().toString());
         }
         if (!this.internalBuffer.isEmpty()) {
-            tag.put("buffer", this.internalBuffer.save(registries));
+            output.store("buffer", ItemStack.CODEC, this.internalBuffer);
         }
     }
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return this.saveWithId(registries);
+        return this.saveWithoutMetadata(registries);
     }
 
     @Nullable
@@ -170,8 +198,12 @@ public class BlockGenBlockEntity extends BlockEntity
     }
 
     @Override
-    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider lookupProvider) {
-        super.onDataPacket(net, pkt, lookupProvider);
+    public void onDataPacket(Connection net, ValueInput input) {
+        super.onDataPacket(net, input);
+        this.loadPacketNBT(input);
+        if (this.level instanceof ClientLevel) {
+            this.level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
+        }
     }
 
     public ItemStack getBuffer() {

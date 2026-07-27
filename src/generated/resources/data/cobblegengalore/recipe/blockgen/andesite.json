@@ -1,0 +1,24 @@
+{
+  "type": "cobblegengalore:blockgen",
+  "consumeLeft": false,
+  "consumeRight": false,
+  "left": {
+    "Name": "minecraft:water",
+    "Properties": {
+      "level": "0"
+    }
+  },
+  "modifier": {
+    "Name": "minecraft:andesite"
+  },
+  "result": {
+    "id": "minecraft:andesite"
+  },
+  "right": {
+    "Name": "minecraft:lava",
+    "Properties": {
+      "level": "0"
+    }
+  },
+  "speed": 1.0
+}

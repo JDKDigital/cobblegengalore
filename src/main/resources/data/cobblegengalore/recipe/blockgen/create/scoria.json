@@ -4,7 +4,7 @@
     "id": "create:scoria",
     "count": 1
   },
-  "speed": 2,
+  "speed": 1,
   "left": {
     "Name": "minecraft:water"
   },

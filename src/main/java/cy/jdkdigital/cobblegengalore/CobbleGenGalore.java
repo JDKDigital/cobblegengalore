@@ -1,10 +1,12 @@
 package cy.jdkdigital.cobblegengalore;
 
 import cy.jdkdigital.cobblegengalore.common.block.BlockGenBlock;
+import cy.jdkdigital.cobblegengalore.common.block.BlockGenBlockItem;
 import cy.jdkdigital.cobblegengalore.common.block.entity.BlockGenBlockEntity;
 import cy.jdkdigital.cobblegengalore.common.recipe.BlockGenRecipe;
+import cy.jdkdigital.cobblegengalore.gametest.CobbleGenGaloreGameTests;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -45,15 +47,15 @@ public class CobbleGenGalore
     public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(Registries.RECIPE_SERIALIZER, MODID);
     public static final DeferredRegister<RecipeType<?>> RECIPE_TYPES = DeferredRegister.create(Registries.RECIPE_TYPE, MODID);
 
-    public static final DeferredBlock<Block> BLOCKGEN_STONE_BLOCK = registerBlock("block_gen_stone", () -> new BlockGenBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.COPPER_BLOCK).noOcclusion(), 1));
-    public static final DeferredBlock<Block> BLOCKGEN_COPPER_BLOCK = registerBlock("block_gen_copper", () -> new BlockGenBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.COPPER_BLOCK).noOcclusion(), 2));
-    public static final DeferredBlock<Block> BLOCKGEN_IRON_BLOCK = registerBlock("block_gen_iron", () -> new BlockGenBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion(), 4));
-    public static final DeferredBlock<Block> BLOCKGEN_GOLD_BLOCK = registerBlock("block_gen_gold", () -> new BlockGenBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.GOLD_BLOCK).noOcclusion(), 8));
-    public static final DeferredBlock<Block> BLOCKGEN_EMERALD_BLOCK = registerBlock("block_gen_emerald", () -> new BlockGenBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.EMERALD_BLOCK).noOcclusion(), 16));
-    public static final DeferredBlock<Block> BLOCKGEN_DIAMOND_BLOCK = registerBlock("block_gen_diamond", () -> new BlockGenBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.DIAMOND_BLOCK).noOcclusion(), 32));
-    public static final DeferredBlock<Block> BLOCKGEN_NETHERITE_BLOCK = registerBlock("block_gen_netherite", () -> new BlockGenBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.NETHERITE_BLOCK).noOcclusion(), 64));
+    public static final DeferredBlock<Block> BLOCKGEN_STONE_BLOCK = registerBlock("block_gen_stone", 1, () -> BlockBehaviour.Properties.ofFullCopy(Blocks.COPPER_BLOCK).noOcclusion());
+    public static final DeferredBlock<Block> BLOCKGEN_COPPER_BLOCK = registerBlock("block_gen_copper", 2, () -> BlockBehaviour.Properties.ofFullCopy(Blocks.COPPER_BLOCK).noOcclusion());
+    public static final DeferredBlock<Block> BLOCKGEN_IRON_BLOCK = registerBlock("block_gen_iron", 4, () -> BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion());
+    public static final DeferredBlock<Block> BLOCKGEN_GOLD_BLOCK = registerBlock("block_gen_gold", 8, () -> BlockBehaviour.Properties.ofFullCopy(Blocks.GOLD_BLOCK).noOcclusion());
+    public static final DeferredBlock<Block> BLOCKGEN_EMERALD_BLOCK = registerBlock("block_gen_emerald", 16, () -> BlockBehaviour.Properties.ofFullCopy(Blocks.EMERALD_BLOCK).noOcclusion());
+    public static final DeferredBlock<Block> BLOCKGEN_DIAMOND_BLOCK = registerBlock("block_gen_diamond", 32, () -> BlockBehaviour.Properties.ofFullCopy(Blocks.DIAMOND_BLOCK).noOcclusion());
+    public static final DeferredBlock<Block> BLOCKGEN_NETHERITE_BLOCK = registerBlock("block_gen_netherite", 64, () -> BlockBehaviour.Properties.ofFullCopy(Blocks.NETHERITE_BLOCK).noOcclusion());
 
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockGenBlockEntity>> BLOCKGEN_BLOCKENTITY = BLOCK_ENTITIES.register("blockgen", () -> BlockEntityType.Builder.of(BlockGenBlockEntity::new,
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockGenBlockEntity>> BLOCKGEN_BLOCKENTITY = BLOCK_ENTITIES.register("blockgen", () -> new BlockEntityType<>(BlockGenBlockEntity::new,
             BLOCKGEN_STONE_BLOCK.get(),
             BLOCKGEN_COPPER_BLOCK.get(),
             BLOCKGEN_IRON_BLOCK.get(),
@@ -61,12 +63,12 @@ public class CobbleGenGalore
             BLOCKGEN_EMERALD_BLOCK.get(),
             BLOCKGEN_DIAMOND_BLOCK.get(),
             BLOCKGEN_NETHERITE_BLOCK.get()
-    ).build(null));
+    ));
 
-    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<?>> BLOCKGEN_RECIPE_SERIALIZER = RECIPE_SERIALIZERS.register("blockgen", BlockGenRecipe.Serializer::new);
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<BlockGenRecipe>> BLOCKGEN_RECIPE_SERIALIZER = RECIPE_SERIALIZERS.register("blockgen", () -> BlockGenRecipe.SERIALIZER);
     public static DeferredHolder<RecipeType<?>, RecipeType<BlockGenRecipe>> BLOCKGEN_RECIPE_TYPE = RECIPE_TYPES.register("blockgen", () -> new RecipeType<>() {});
 
-    public static final TagKey<Item> BLOCK_GENERATORS = ItemTags.create(ResourceLocation.fromNamespaceAndPath(MODID, "block_generators"));
+    public static final TagKey<Item> BLOCK_GENERATORS = ItemTags.create(Identifier.fromNamespaceAndPath(MODID, "block_generators"));
 
 
     public CobbleGenGalore(IEventBus modEventBus, ModContainer modContainer)
@@ -82,6 +84,8 @@ public class CobbleGenGalore
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+
+        CobbleGenGaloreGameTests.init();
     }
 
     // Add the example block item to the building blocks tab
@@ -94,9 +98,9 @@ public class CobbleGenGalore
         }
     }
 
-    private static DeferredBlock<Block> registerBlock(String name, Supplier<? extends Block> sup) {
-        DeferredBlock<Block> block = BLOCKS.register(name, sup);
-        ITEMS.registerSimpleBlockItem(name, block);
+    private static DeferredBlock<Block> registerBlock(String name, int modifier, Supplier<BlockBehaviour.Properties> properties) {
+        DeferredBlock<Block> block = BLOCKS.registerBlock(name, p -> new BlockGenBlock(p, modifier), properties);
+        ITEMS.registerItem(name, p -> new BlockGenBlockItem(block.get(), p), () -> new Item.Properties().useBlockDescriptionPrefix());
         return block;
     }
 }

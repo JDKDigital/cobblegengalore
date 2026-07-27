@@ -1,0 +1,21 @@
+{
+  "type": "cobblegengalore:blockgen",
+  "consumeLeft": false,
+  "consumeRight": false,
+  "left": {
+    "Name": "minecraft:packed_ice"
+  },
+  "modifier": {
+    "Name": "minecraft:air"
+  },
+  "result": {
+    "id": "minecraft:cobbled_deepslate"
+  },
+  "right": {
+    "Name": "minecraft:lava",
+    "Properties": {
+      "level": "0"
+    }
+  },
+  "speed": 1.0
+}
