@@ -84,6 +84,7 @@ public class BlockGenBlock extends BaseEntityBlock
                         blockEntity.getBuffer().shrink(addedStack.getCount());
                     }
                 }
+                blockEntity.setChanged();
             }
             return InteractionResult.sidedSuccess(level.isClientSide());
         }
