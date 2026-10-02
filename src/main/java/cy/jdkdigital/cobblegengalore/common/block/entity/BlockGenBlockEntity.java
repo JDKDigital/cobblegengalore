@@ -9,6 +9,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -23,6 +25,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,17 +49,19 @@ public class BlockGenBlockEntity extends BlockEntity
         }
 
         if (level.getGameTime() % Config.tickRate == 0) {
-            if (blockEntity.recipe != null && (blockEntity.internalBuffer.isEmpty() || blockEntity.internalBuffer.getCount() < blockEntity.internalBuffer.getMaxStackSize())) {
+            var bufferCountBefore = blockEntity.internalBuffer.getCount();
+            if (blockEntity.recipe != null) {
                 var recipe = blockEntity.recipe.value();
                 var modifier = (blockEntity.getBlockState().getBlock() instanceof BlockGenBlock block ? block.modifier : 1) * recipe.speed;
                 var production = recipe.result.copy();
-                var maxProduction = Math.min(production.getMaxStackSize(), (int) (production.getCount() * modifier));
+                // Only produce what the buffer has room for, so output that can't be pushed out is never voided
+                var maxProduction = blockEntity.getBufferSpace(production, (int) (production.getCount() * modifier));
 
                 // Consume fluids
                 var consumedAmountLeft = recipe.consumeLeft ? 0 : maxProduction;
                 var consumedAmountRight = recipe.consumeRight ? 0 : maxProduction;
 
-                if (recipe.consumeLeft || recipe.consumeRight) {
+                if (maxProduction > 0 && (recipe.consumeLeft || recipe.consumeRight)) {
                     for (Direction dir : Direction.values()) {
                         if (dir.getAxis().isHorizontal()) {
                             var state = RecipeHelper.getStateAtPos(level, blockPos, dir);
@@ -87,24 +92,58 @@ public class BlockGenBlockEntity extends BlockEntity
 
                 if (maxProduction > 0) {
                     production.setCount(maxProduction);
-                    if (ItemStack.isSameItemSameComponents(blockEntity.internalBuffer, production)) {
-                        if (blockEntity.internalBuffer.getCount() < blockEntity.internalBuffer.getMaxStackSize()) {
-                            blockEntity.internalBuffer.grow(production.getCount());
-                        }
-                    } else {
+                    if (blockEntity.internalBuffer.isEmpty()) {
                         blockEntity.internalBuffer = production;
+                    } else {
+                        blockEntity.internalBuffer.grow(production.getCount());
                     }
-                    // Don't go over stack limit
-                    blockEntity.internalBuffer.setCount(Math.min(blockEntity.internalBuffer.getMaxStackSize(), blockEntity.internalBuffer.getCount()));
                 }
             }
             var cap = level.getCapability(Capabilities.ItemHandler.BLOCK, blockPos.above(), null);
-            blockEntity.internalBuffer = ItemHandlerHelper.insertItem(cap, blockEntity.internalBuffer, false);
+            blockEntity.internalBuffer = insertInStacks(cap, blockEntity.internalBuffer);
+            if (blockEntity.internalBuffer.getCount() != bufferCountBefore) {
+                blockEntity.setChanged();
+            }
         }
 
         if (level.getGameTime() % 113 == 0 && blockEntity.recipe == null && level instanceof ServerLevel serverLevel) {
             blockEntity.setRecipe(RecipeHelper.getRecipe(serverLevel, blockPos));
         }
+    }
+
+    /**
+     * How much of a production cycle the internal buffer can take. The buffer holds at least one stack (for manual
+     * collection) or one full cycle, whichever is larger. A buffer holding a different item takes nothing until emptied.
+     */
+    private int getBufferSpace(ItemStack production, int cycleProduction) {
+        if (internalBuffer.isEmpty()) {
+            return cycleProduction;
+        }
+        if (!ItemStack.isSameItemSameComponents(internalBuffer, production)) {
+            return 0;
+        }
+        var capacity = Math.max(production.getMaxStackSize(), cycleProduction);
+        return Math.max(0, Math.min(cycleProduction, capacity - internalBuffer.getCount()));
+    }
+
+    /**
+     * Inserts the items one max-size stack at a time, since item handlers only accept up to a stack per insert.
+     * Returns whatever could not be inserted.
+     */
+    private static ItemStack insertInStacks(@Nullable IItemHandler handler, ItemStack items) {
+        if (handler == null || items.isEmpty()) {
+            return items;
+        }
+        var remaining = items.copy();
+        while (!remaining.isEmpty()) {
+            var stack = remaining.copyWithCount(Math.min(remaining.getCount(), remaining.getMaxStackSize()));
+            var notInserted = ItemHandlerHelper.insertItem(handler, stack, false);
+            remaining.shrink(stack.getCount() - notInserted.getCount());
+            if (!notInserted.isEmpty()) {
+                break;
+            }
+        }
+        return remaining.isEmpty() ? ItemStack.EMPTY : remaining;
     }
 
     public static void clientTick(Level level, BlockPos blockPos, BlockState blockState, BlockGenBlockEntity blockEntity) {
@@ -142,7 +181,18 @@ public class BlockGenBlockEntity extends BlockEntity
             this.recipe = null;
             this.recipeId = ResourceLocation.tryParse(tag.getString("recipe"));
         }
-        if (tag.contains("buffer")) {
+        this.internalBuffer = ItemStack.EMPTY;
+        if (tag.contains("bufferStacks")) {
+            for (var stackTag : tag.getList("bufferStacks", Tag.TAG_COMPOUND)) {
+                var stack = ItemStack.parseOptional(registries, (CompoundTag) stackTag);
+                if (this.internalBuffer.isEmpty()) {
+                    this.internalBuffer = stack;
+                } else {
+                    this.internalBuffer.grow(stack.getCount());
+                }
+            }
+        } else if (tag.contains("buffer")) {
+            // Older versions saved the buffer as a single stack
             this.internalBuffer = ItemStack.parse(registries, tag.getCompound("buffer")).orElse(ItemStack.EMPTY);
         }
     }
@@ -154,7 +204,13 @@ public class BlockGenBlockEntity extends BlockEntity
             tag.putString("recipe", this.recipe.id().toString());
         }
         if (!this.internalBuffer.isEmpty()) {
-            tag.put("buffer", this.internalBuffer.save(registries));
+            // The buffer can hold more than one stack, which is more than an ItemStack can be saved with, so save it as separate stacks
+            var stacks = new ListTag();
+            var remaining = this.internalBuffer.copy();
+            while (!remaining.isEmpty()) {
+                stacks.add(remaining.split(remaining.getMaxStackSize()).save(registries));
+            }
+            tag.put("bufferStacks", stacks);
         }
     }
 
